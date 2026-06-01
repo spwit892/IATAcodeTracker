@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Airport Database Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans antialiased h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex items-center justify-between shrink-0 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 text-xs font-mono font-bold px-2 py-1 rounded text-white tracking-wider uppercase">
+                SQL Server
+            </div>
+            <h1 class="text-lg font-mono font-bold text-slate-200">db_logistics_east_coast</h1>
+        </div>
+        <div class="text-xs font-mono text-slate-500">
+            Status: Connected • 24 Records Loaded
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col p-4 sm:p-6 gap-4 overflow-hidden max-w-5xl w-full mx-auto">
+        
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shadow-xl shrink-0">
+            <label for="search-input" class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">
+                Execute Lookup Query (Enter 3-Letter Airport Code)
+            </label>
+            <div class="relative flex items-center">
+                <span class="absolute left-4 font-mono text-indigo-500 font-bold select-none">&gt;</span>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    maxlength="3"
+                    placeholder="e.g., MIA, JFK, FLL" 
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-24 py-3 font-mono font-bold tracking-widest text-indigo-400 placeholder-slate-600 uppercase focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                    autocomplete="off"
+                >
+                <div class="absolute right-3 flex items-center gap-2">
+                    <button id="clear-btn" class="text-xs font-mono text-slate-500 hover:text-slate-300 px-2 py-1 rounded transition-colors hidden">
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-emerald-400 shrink-0 flex items-center justify-between">
+            <span id="sql-query">SELECT * FROM east_coast_corridor WHERE code = '';</span>
+            <span id="execution-time" class="text-slate-600">0.00ms</span>
+        </div>
+
+        <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex flex-col shadow-xl">
+            <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 font-mono text-xs text-slate-400 uppercase tracking-wider">
+                Output Row Terminal
+            </div>
+            
+            <div id="result-view" class="flex-1 p-6 flex flex-col items-center justify-center text-center overflow-y-auto">
+                <div id="empty-state" class="text-slate-500 font-mono text-sm max-w-sm">
+                    <div class="text-3xl mb-2">📥</div>
+                    Waiting for input parameter. Enter a valid 3-letter airport code above to fetch data rows.
+                </div>
+
+                <div id="record-card" class="w-full max-w-2xl text-left hidden flex flex-col h-full justify-between">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between border-b border-slate-800 pb-4">
+                            <div>
+                                <span class="text-xs font-mono font-bold uppercase text-indigo-400 tracking-widest block">System Primary Key</span>
+                                <h2 id="res-code" class="text-5xl font-black tracking-tight text-white font-mono mt-1">---</h2>
+                            </div>
+                            <button id="speak-btn" class="bg-slate-900 border border-slate-700 hover:border-indigo-500 hover:bg-slate-800/50 text-xl p-4 rounded-xl transition-all shadow-md group active:scale-95" title="Stream Pronunciation Locator">
+                                <span class="group-hover:scale-110 block transition-transform">🔊</span>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                            <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4">
+                                <span class="text-xs font-mono uppercase tracking-wider text-slate-500 block">Registered Title</span>
+                                <div id="res-name" class="text-lg font-bold text-slate-200 mt-1 font-mono">---</div>
+                            </div>
+                            <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4">
+                                <span class="text-xs font-mono uppercase tracking-wider text-slate-500 block">Geographic Location</span>
+                                <div id="res-location" class="text-lg font-bold text-slate-200 mt-1 font-mono">---</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-800 pt-4 mt-auto text-[11px] font-mono text-slate-600 flex justify-between">
+                        <span>Row status: 1 record fetched matching constraints.</span>
+                        <span>Encoding: UTF-8</span>
+                    </div>
+                </div>
+
+                <div id="error-state" class="text-rose-400 font-mono text-sm max-w-sm hidden">
+                    <div class="text-3xl mb-2">❌</div>
+                    <div class="font-bold uppercase tracking-wider">Query Exception</div>
+                    <p class="text-slate-500 mt-1 text-xs">No records matching the entered key were located within the active table cluster.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Relational Dataset Array Mapping
+        const databaseTable = [
+            { code: "MIA", name: "Miami International Airport", city: "Miami", state: "Florida" },
+            { code: "FLL", name: "Fort Lauderdale–Hollywood International Airport", city: "Fort Lauderdale", state: "Florida" },
+            { code: "PBI", name: "Palm Beach International Airport", city: "West Palm Beach", state: "Florida" },
+            { code: "MCO", name: "Orlando International Airport", city: "Orlando", state: "Florida" },
+            { code: "JAX", name: "Jacksonville International Airport", city: "Jacksonville", state: "Florida" },
+            { code: "ATL", name: "Hartsfield–Jackson Atlanta International Airport", city: "Atlanta", state: "Georgia" },
+            { code: "SAV", name: "Savannah/Hilton Head International Airport", city: "Savannah", state: "Georgia" },
+            { code: "CHS", name: "Charleston International Airport", city: "Charleston", state: "South Carolina" },
+            { code: "GSP", name: "Greenville–Spartanburg International Airport", city: "Greer", state: "South Carolina" },
+            { code: "CLT", name: "Charlotte Douglas International Airport", city: "Charlotte", state: "North Carolina" },
+            { code: "RDU", name: "Raleigh–Durham International Airport", city: "Morrisville", state: "North Carolina" },
+            { code: "GSO", name: "Piedmont Triad International Airport", city: "Greensboro", state: "North Carolina" },
+            { code: "RIC", name: "Richmond International Airport", city: "Richmond", state: "Virginia" },
+            { code: "ORF", name: "Norfolk International Airport", city: "Norfolk", state: "Virginia" },
+            { code: "IAD", name: "Washington Dulles International Airport", city: "Dulles", state: "Virginia" },
+            { code: "DCA", name: "Ronald Reagan Washington National Airport", city: "Arlington", state: "Virginia" },
+            { code: "BWI", name: "Baltimore/Washington International Thurgood Marshall Airport", city: "Baltimore", state: "Maryland" },
+            { code: "PHL", name: "Philadelphia International Airport", city: "Philadelphia", state: "Pennsylvania" },
+            { code: "EWR", name: "Newark Liberty International Airport", city: "Newark", state: "New Jersey" },
+            { code: "ACY", name: "Atlantic City International Airport", city: "Atlantic City", state: "New Jersey" },
+            { code: "JFK", name: "John F. Kennedy International Airport", city: "New York", state: "New York" },
+            { code: "LGA", name: "LaGuardia Airport", city: "New York", state: "New York" },
+            { code: "SWF", name: "New York Stewart International Airport", city: "Newburgh", state: "New York" },
+            { code: "HPN", name: "Westchester County Airport", city: "White Plains", state: "New York" }
+        ];
+
+        // UI Element Selectors
+        const searchInput = document.getElementById('search-input');
+        const clearBtn = document.getElementById('clear-btn');
+        const sqlQueryDisplay = document.getElementById('sql-query');
+        const executionTimeDisplay = document.getElementById('execution-time');
+        
+        const emptyState = document.getElementById('empty-state');
+        const recordCard = document.getElementById('record-card');
+        const errorState = document.getElementById('error-state');
+
+        const resCode = document.getElementById('res-code');
+        const resName = document.getElementById('res-name');
+        const resLocation = document.getElementById('res-location');
+        const speakBtn = document.getElementById('speak-btn');
+
+        let activeRecord = null;
+
+        // Input Monitor Handler
+        searchInput.addEventListener('input', (e) => {
+            const rawVal = e.target.value.toUpperCase().trim();
+            searchInput.value = rawVal; // Force uppercase layout format
+            
+            // Toggle visibility of clear button
+            clearBtn.classList.toggle('hidden', rawVal.length === 0);
+            
+            // Reflect structural query update inside real-time CLI bar
+            sqlQueryDisplay.textContent = `SELECT * FROM east_coast_corridor WHERE code = '${rawVal}';`;
+
+            if (rawVal.length === 0) {
+                showState('empty');
+                executionTimeDisplay.textContent = '0.00ms';
+                activeRecord = null;
+                return;
+            }
+
+            // Simulate parsing and look up transaction timings
+            const startTime = performance.now();
+            const match = databaseTable.find(item => item.code === rawVal);
+            const endTime = performance.now();
+            executionTimeDisplay.textContent = `${(endTime - startTime).toFixed(2)}ms`;
+
+            if (rawVal.length === 3) {
+                if (match) {
+                    activeRecord = match;
+                    displayRecord(match);
+                } else {
+                    activeRecord = null;
+                    showState('error');
+                }
+            } else {
+                // Keep panel evaluation clearing while code length is partial
+                showState('empty');
+                activeRecord = null;
+            }
+        });
+
+        // Clear Action Handler
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            clearBtn.classList.add('hidden');
+            sqlQueryDisplay.textContent = "SELECT * FROM east_coast_corridor WHERE code = '';";
+            executionTimeDisplay.textContent = '0.00ms';
+            showState('empty');
+            activeRecord = null;
+            window.speechSynthesis.cancel();
+        });
+
+        // Output State Renderer switcher
+        function showState(state) {
+            emptyState.classList.toggle('hidden', state !== 'empty');
+            recordCard.classList.toggle('hidden', state !== 'record');
+            errorState.classList.toggle('hidden', state !== 'error');
+        }
+
+        // Display Data Field Binder
+        function displayRecord(record) {
+            resCode.textContent = record.code;
+            resName.textContent = record.name;
+            resLocation.textContent = `${record.city}, ${record.state}`;
+            showState('record');
+            
+            // Auto-trigger audio speech feedback immediately when a valid code match evaluates
+            speakAirportSentence(record);
+        }
+
+        // Text-to-Speech Routine Execution
+        function speakAirportSentence(record) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                
+                // Break down code characters for spelling clarity (M I A)
+                const phoneticCode = record.code.split('').join(' ');
+                const constructedSentence = `${phoneticCode}, ${record.name}, ${record.city}, ${record.state}`;
+                
+                const utterance = new SpeechSynthesisUtterance(constructedSentence);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.85; // Natural spoken cadence pacing
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Explicit audio trigger invocation binding
+        speakBtn.addEventListener('click', () => {
+            if (activeRecord) {
+                speakAirportSentence(activeRecord);
+            }
+        });
+    </script>
+</body>
+</html>
